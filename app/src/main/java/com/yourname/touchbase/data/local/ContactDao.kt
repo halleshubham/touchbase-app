@@ -39,6 +39,15 @@ interface ContactDao {
         sortAscending: Boolean
     ): PagingSource<Int, ContactWithTags>
 
+    /**
+     * Full (non-paged) list, for callers that need every matching contact at
+     * once rather than a scrollable page - e.g. the call-queue builder has
+     * to know every contact id for a tag to start a session.
+     */
+    @Transaction
+    @Query("SELECT * FROM contacts ORDER BY rawTimestampAdded DESC")
+    fun observeAllWithTags(): Flow<List<ContactWithTags>>
+
     @Upsert
     suspend fun upsert(contact: Contact): Long
 

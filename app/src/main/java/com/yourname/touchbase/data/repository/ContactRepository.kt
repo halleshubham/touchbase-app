@@ -26,6 +26,9 @@ class ContactRepository @Inject constructor(
 
     fun observeTags(): Flow<List<Tag>> = dao.observeAllTags()
 
+    /** Full (non-paged) list - see ContactDao.observeAllWithTags(). */
+    fun observeContacts(): Flow<List<ContactWithTags>> = dao.observeAllWithTags()
+
     /**
      * Pulls every phone-having contact from ContactsContract and upserts a
      * shadow row for each into Room, matched by systemContactId. Existing

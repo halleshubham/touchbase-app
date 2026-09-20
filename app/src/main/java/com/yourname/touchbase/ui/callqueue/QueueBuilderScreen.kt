@@ -11,7 +11,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourname.touchbase.data.local.ContactWithTags
 import com.yourname.touchbase.data.local.Tag
-import com.yourname.touchbase.ui.contacts.ContactListViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,10 +18,10 @@ import kotlinx.coroutines.launch
 fun QueueBuilderScreen(
     onSessionReady: (Long) -> Unit,
     onBack: () -> Unit,
-    contactListViewModel: ContactListViewModel = hiltViewModel(),
+    queueBuilderViewModel: QueueBuilderViewModel = hiltViewModel(),
     callQueueViewModel: CallQueueViewModel = hiltViewModel()
 ) {
-    val uiState by contactListViewModel.uiState.collectAsState()
+    val uiState by queueBuilderViewModel.uiState.collectAsState()
     var selectedTag by remember { mutableStateOf<Tag?>(null) }
     val scope = rememberCoroutineScope()
 
