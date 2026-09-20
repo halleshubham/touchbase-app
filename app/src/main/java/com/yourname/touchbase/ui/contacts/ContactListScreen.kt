@@ -89,9 +89,7 @@ fun ContactListScreen(
     ) { padding ->
         Column(Modifier.padding(padding)) {
 
-            // Tag filter row - the most-used control, so it stays visible;
-            // sort/date/saved-lists live behind the filter icon above to
-            // avoid stacking four chip rows on screen at once.
+            // Tag filter row stays visible; sort/date/lists are behind the filter icon - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
             LazyRow(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)

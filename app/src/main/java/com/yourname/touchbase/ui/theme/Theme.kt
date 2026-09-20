@@ -15,15 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/**
- * Hand-authored M3 tonal roles for a teal "stay in touch" seed (#146464),
- * covering the roles that actually show up in this app's UI (containers,
- * on-colors, error, outline). Roles left unset keep M3's own neutral
- * defaults, which are already seed-independent grays.
- *
- * This is the fallback for API < 31; on API 31+ TouchBaseTheme prefers real
- * wallpaper-derived dynamic color instead (see dynamicColor param below).
- */
+// Hand-authored teal palette, fallback for API < 31 - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
 private val LightColors = lightColorScheme(
     primary = Color(0xFF146464),
     onPrimary = Color(0xFFFFFFFF),
@@ -80,8 +72,7 @@ private val DarkColors = darkColorScheme(
 
 private val TouchBaseTypography = Typography()
 
-// Slightly softer/rounder than M3's own defaults (M3 Expressive leans into
-// friendlier, more rounded shapes for approachable, everyday-use apps).
+// Softer/rounder than M3 defaults, M3 Expressive style - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
 private val TouchBaseShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
     small = RoundedCornerShape(10.dp),
@@ -93,8 +84,7 @@ private val TouchBaseShapes = Shapes(
 @Composable
 fun TouchBaseTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Material You: derive the palette from the user's wallpaper on Android
-    // 12+, matching the rest of their device instead of a fixed brand color.
+    // Material You: wallpaper-derived palette on Android 12+.
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

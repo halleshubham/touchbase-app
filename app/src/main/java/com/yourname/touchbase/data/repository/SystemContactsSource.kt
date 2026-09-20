@@ -15,11 +15,7 @@ data class SystemContact(
     val systemContactId: Long,
     val displayName: String,
     val phoneNumber: String,
-    // NOT a "date added" - ContactsContract doesn't expose true creation
-    // time. This moves whenever the OS touches the contact for any reason
-    // (a call, a sync, photo/label changes, contact linking), so the
-    // repository only uses it once, the first time a contact is seen -
-    // see ContactRepository.refreshFromSystemContacts().
+    // NOT a creation date - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     val lastUpdatedTimestamp: Long
 )
 

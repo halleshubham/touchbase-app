@@ -63,9 +63,7 @@ class ContactListViewModel @Inject constructor(
 ) : ViewModel() {
 
     init {
-        // Safe to start here (unlike in TouchBaseApp.onCreate): this
-        // ViewModel is only ever constructed inside ContactsPermissionGate,
-        // so READ_CONTACTS/WRITE_CONTACTS are already granted by this point.
+        // Safe here since this VM only exists behind ContactsPermissionGate - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
         contactsContentObserver.startWatching()
     }
 
@@ -78,14 +76,7 @@ class ContactListViewModel @Inject constructor(
         ListControls(tagFilter, sortOrder, dateFilter)
     }
 
-    /**
-     * Paged, lazily-loaded contact list: each filter/sort change builds a new
-     * Pager (and thus a new PagingSource) over the DAO's single flexible
-     * query, so filtering/sorting happens in SQLite against the indexed
-     * columns rather than by reloading and re-sorting the whole table in
-     * Kotlin. cachedIn(viewModelScope) survives configuration changes and
-     * shares one paging stream across collectors.
-     */
+    // Rebuilds the Pager per filter/sort change - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     val pagedContacts: Flow<PagingData<ContactWithTags>> = controls
         .flatMapLatest { c ->
             val minTimestampAdded = c.dateFilter.maxAgeDays?.let { days ->

@@ -21,11 +21,7 @@ class TouchBaseApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
-        // ContactsContentObserver.startWatching() is NOT started here: it
-        // registers on ContactsContract, which requires READ_CONTACTS/
-        // WRITE_CONTACTS - permissions that don't exist yet at process
-        // startup. It's started from ContactListViewModel instead, which is
-        // only ever constructed behind ContactsPermissionGate.
+        // Contacts observer intentionally not started here - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     }
 
     private fun createNotificationChannels() {

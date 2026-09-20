@@ -28,9 +28,7 @@ object AppModule {
             TouchBaseDatabase::class.java,
             "touchbase.db"
         )
-            // Pre-release app, no installed base to preserve yet - fine to
-            // wipe and recreate on schema changes instead of writing
-            // migrations for every one. Revisit once there's a real release.
+            // Pre-release, no installed base yet - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
             .fallbackToDestructiveMigration()
             .build()
 

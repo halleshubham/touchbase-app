@@ -49,12 +49,7 @@ class ContactRepository @Inject constructor(
                 systemContactId = sys.systemContactId,
                 displayName = sys.displayName,
                 phoneNumber = sys.phoneNumber,
-                // Stamped ONCE, the first time this contact is seen, then
-                // never touched again. sys.lastUpdatedTimestamp is not a
-                // creation date (see SystemContact) - re-reading it on every
-                // refresh (the previous behavior) made long-existing
-                // contacts intermittently look freshly added whenever the
-                // OS bumped their metadata for an unrelated reason.
+                // Stamped once on first sight, never overwritten - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
                 rawTimestampAdded = existing?.rawTimestampAdded ?: sys.lastUpdatedTimestamp,
                 syncStatus = existing?.syncStatus ?: SyncStatus.SYNCED
             )

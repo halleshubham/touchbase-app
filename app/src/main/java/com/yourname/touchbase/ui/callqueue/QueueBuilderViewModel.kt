@@ -17,10 +17,7 @@ data class QueueBuilderUiState(
     val allTags: List<Tag> = emptyList()
 )
 
-/**
- * Needs the full contact list (not paged) - building a queue means resolving
- * every contact id matching the chosen tag before starting a session.
- */
+// Needs the full contact list, not paged - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
 @HiltViewModel
 class QueueBuilderViewModel @Inject constructor(
     repository: ContactRepository

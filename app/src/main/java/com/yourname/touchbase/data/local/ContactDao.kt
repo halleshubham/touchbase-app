@@ -13,14 +13,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ContactDao {
 
-    /**
-     * Single query backing the contacts list: optional tag filter, optional
-     * "added since" cutoff, and a sort direction, all pushed down to SQLite
-     * so PagingSource only ever materializes one page of rows at a time
-     * instead of the whole table. DISTINCT covers contacts with more than
-     * one tag when no tagId filter is applied (LEFT JOIN would otherwise
-     * repeat a row once per tag).
-     */
+    // Single flexible query for the paged list - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     @Transaction
     @Query(
         """
@@ -39,11 +32,7 @@ interface ContactDao {
         sortAscending: Boolean
     ): PagingSource<Int, ContactWithTags>
 
-    /**
-     * Full (non-paged) list, for callers that need every matching contact at
-     * once rather than a scrollable page - e.g. the call-queue builder has
-     * to know every contact id for a tag to start a session.
-     */
+    // Full (non-paged) list, for callers that need everything at once - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     @Transaction
     @Query("SELECT * FROM contacts ORDER BY rawTimestampAdded DESC")
     fun observeAllWithTags(): Flow<List<ContactWithTags>>
