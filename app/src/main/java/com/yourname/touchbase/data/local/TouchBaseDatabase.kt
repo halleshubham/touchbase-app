@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         CallSession::class,
         CallSessionItem::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class TouchBaseDatabase : RoomDatabase() {

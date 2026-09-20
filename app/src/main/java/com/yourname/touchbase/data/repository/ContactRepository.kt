@@ -1,5 +1,6 @@
 package com.yourname.touchbase.data.repository
 
+import androidx.paging.PagingSource
 import com.yourname.touchbase.data.local.Contact
 import com.yourname.touchbase.data.local.ContactDao
 import com.yourname.touchbase.data.local.ContactTagCrossRef
@@ -17,7 +18,11 @@ class ContactRepository @Inject constructor(
     private val systemSource: SystemContactsSource
 ) {
 
-    fun observeContacts(): Flow<List<ContactWithTags>> = dao.observeAllWithTags()
+    fun pagedContacts(
+        tagId: Long?,
+        minTimestampAdded: Long?,
+        sortAscending: Boolean
+    ): PagingSource<Int, ContactWithTags> = dao.pagedContacts(tagId, minTimestampAdded, sortAscending)
 
     fun observeTags(): Flow<List<Tag>> = dao.observeAllTags()
 

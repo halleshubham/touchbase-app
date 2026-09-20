@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.yourname.touchbase.data.local.ContactWithTags
 import com.yourname.touchbase.data.local.MessageTemplate
 import com.yourname.touchbase.data.local.Tag
@@ -37,6 +40,7 @@ fun ContactListScreen(
     viewModel: ContactListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val pagingItems = viewModel.pagedContacts.collectAsLazyPagingItems()
     var showQuickAdd by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
@@ -136,7 +140,11 @@ fun ContactListScreen(
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
-                    items(uiState.contacts, key = { it.contact.id }) { cwt ->
+                    items(
+                        count = pagingItems.itemCount,
+                        key = pagingItems.itemKey { it.contact.id }
+                    ) { index ->
+                        val cwt = pagingItems[index] ?: return@items
                         ContactRow(
                             contactWithTags = cwt,
                             allTags = uiState.allTags,
@@ -147,6 +155,13 @@ fun ContactListScreen(
                             onOpenEvents = { onOpenEvents(cwt.contact.id, cwt.contact.displayName) }
                         )
                         HorizontalDivider()
+                    }
+                    if (pagingItems.loadState.append is LoadState.Loading) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            }
+                        }
                     }
                 }
             }

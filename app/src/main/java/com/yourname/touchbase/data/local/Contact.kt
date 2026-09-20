@@ -1,6 +1,7 @@
 package com.yourname.touchbase.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class SyncStatus { PENDING, SYNCED, CONFLICT }
@@ -13,7 +14,13 @@ enum class SyncStatus { PENDING, SYNCED, CONFLICT }
  * systemContactId is nullable to support "quick add" contacts that haven't
  * been written into ContactsContract yet (see Phase 1 quick-add flow).
  */
-@Entity(tableName = "contacts")
+@Entity(
+    tableName = "contacts",
+    indices = [
+        Index(value = ["systemContactId"]),
+        Index(value = ["rawTimestampAdded"])
+    ]
+)
 data class Contact(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val systemContactId: Long? = null,

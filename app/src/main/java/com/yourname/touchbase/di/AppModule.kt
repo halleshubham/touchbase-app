@@ -26,7 +26,12 @@ object AppModule {
             context,
             TouchBaseDatabase::class.java,
             "touchbase.db"
-        ).build()
+        )
+            // Pre-release app, no installed base to preserve yet - fine to
+            // wipe and recreate on schema changes instead of writing
+            // migrations for every one. Revisit once there's a real release.
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun provideContactDao(db: TouchBaseDatabase): ContactDao = db.contactDao()

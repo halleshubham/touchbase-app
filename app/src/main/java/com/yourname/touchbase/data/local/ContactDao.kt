@@ -1,5 +1,6 @@
 package com.yourname.touchbase.data.local
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -12,20 +13,31 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ContactDao {
 
-    @Transaction
-    @Query("SELECT * FROM contacts ORDER BY rawTimestampAdded DESC")
-    fun observeAllWithTags(): Flow<List<ContactWithTags>>
-
+    /**
+     * Single query backing the contacts list: optional tag filter, optional
+     * "added since" cutoff, and a sort direction, all pushed down to SQLite
+     * so PagingSource only ever materializes one page of rows at a time
+     * instead of the whole table. DISTINCT covers contacts with more than
+     * one tag when no tagId filter is applied (LEFT JOIN would otherwise
+     * repeat a row once per tag).
+     */
     @Transaction
     @Query(
         """
         SELECT DISTINCT contacts.* FROM contacts
-        INNER JOIN contact_tag_cross_ref ON contacts.id = contact_tag_cross_ref.contactId
-        WHERE contact_tag_cross_ref.tagId = :tagId
-        ORDER BY rawTimestampAdded DESC
+        LEFT JOIN contact_tag_cross_ref ON contacts.id = contact_tag_cross_ref.contactId
+        WHERE (:tagId IS NULL OR contact_tag_cross_ref.tagId = :tagId)
+          AND (:minTimestampAdded IS NULL OR contacts.rawTimestampAdded >= :minTimestampAdded)
+        ORDER BY
+            CASE WHEN :sortAscending = 0 THEN contacts.rawTimestampAdded END DESC,
+            CASE WHEN :sortAscending = 1 THEN contacts.rawTimestampAdded END ASC
         """
     )
-    fun observeByTag(tagId: Long): Flow<List<ContactWithTags>>
+    fun pagedContacts(
+        tagId: Long?,
+        minTimestampAdded: Long?,
+        sortAscending: Boolean
+    ): PagingSource<Int, ContactWithTags>
 
     @Upsert
     suspend fun upsert(contact: Contact): Long
