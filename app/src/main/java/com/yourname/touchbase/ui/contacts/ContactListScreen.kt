@@ -165,6 +165,7 @@ fun ContactListScreen(
                             contactWithTags = cwt,
                             allTags = uiState.allTags,
                             templates = uiState.templates,
+                            dateBasis = uiState.dateBasis,
                             onToggleTag = { tag, assigned ->
                                 viewModel.toggleTag(cwt.contact.id, tag, assigned)
                             },
@@ -391,6 +392,7 @@ private fun ContactRow(
     contactWithTags: ContactWithTags,
     allTags: List<Tag>,
     templates: List<MessageTemplate>,
+    dateBasis: DateBasis,
     onToggleTag: (Tag, Boolean) -> Unit,
     onCreateTag: (String) -> Unit,
     onOpenEvents: () -> Unit,
@@ -414,8 +416,13 @@ private fun ContactRow(
             Column(Modifier.weight(1f)) {
                 Text(contactWithTags.contact.displayName, style = MaterialTheme.typography.bodyLarge)
                 Text(contactWithTags.contact.phoneNumber, style = MaterialTheme.typography.bodySmall)
+                val basisMillis = if (dateBasis == DateBasis.SYNCED) {
+                    contactWithTags.contact.lastSyncedTimestamp
+                } else {
+                    contactWithTags.contact.rawTimestampAdded
+                }
                 Text(
-                    "Added ${formatAddedDate(contactWithTags.contact.rawTimestampAdded)}",
+                    "${dateBasis.label} ${formatAddedDate(basisMillis)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

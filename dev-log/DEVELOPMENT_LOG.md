@@ -210,6 +210,17 @@ explaining it in place.
   midnight for the picked dates - reinterpreted as local start/end-of-day
   so the end date is fully inclusive.
 
+- **Contact row date label ignored the active basis.** ContactRow always
+  showed "Added <rawTimestampAdded>" regardless of which basis (Added/
+  Synced) the filter sheet had selected, so filtering by "Synced" still
+  labeled every row "Added" - reads as if synced contacts are being
+  mislabeled as added. Now shows "Added"/"Last synced" with the matching
+  timestamp. Separately (not a bug, just worth knowing): right after a
+  fresh DB rebuild, `rawTimestampAdded` and `lastSyncedTimestamp` are
+  stamped from the same signal at the same moment for every contact, so
+  the two bases return identical results until contacts actually change
+  again - they only diverge going forward.
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since
