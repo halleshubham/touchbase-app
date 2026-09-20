@@ -171,6 +171,16 @@ explaining it in place.
   (`create_list?tagId={tagId}`), and when present it pre-checks the tag's
   current members and diffs on submit instead of creating a new tag.
 
+- **Call history was tracked but never shown anywhere.**
+  `CallSessionDao.observeHistoryForContact()`/`observeRecentSessions()`
+  already existed - CallSessionItem already records outcome, feedback,
+  note, and timestamp per call - but no ViewModel/screen ever called
+  either query. Added `ContactHistoryScreen` (per-contact, reached via a
+  new "History" button on each contact row) using the existing
+  `observeHistoryForContact` query. `observeRecentSessions` (all sessions,
+  not per-contact) is still unused - a "recent sessions" list is a
+  natural follow-up if wanted.
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since

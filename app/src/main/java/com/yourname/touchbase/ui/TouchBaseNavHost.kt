@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.yourname.touchbase.ui.callqueue.CallQueuePermissionGate
 import com.yourname.touchbase.ui.callqueue.CallQueueScreen
+import com.yourname.touchbase.ui.callqueue.ContactHistoryScreen
 import com.yourname.touchbase.ui.callqueue.QueueBuilderScreen
 import com.yourname.touchbase.dedupe.MergeDuplicatesScreen
 import com.yourname.touchbase.ui.contacts.ContactListScreen
@@ -29,10 +30,12 @@ object Routes {
     const val MERGE_DUPLICATES = "merge_duplicates"
     const val CREATE_LIST = "create_list?tagId={tagId}"
     const val MANAGE_LISTS = "manage_lists"
+    const val CONTACT_HISTORY = "history/{contactId}/{contactName}"
 
     fun events(contactId: Long, contactName: String) = "events/$contactId/$contactName"
     fun callQueue(sessionId: Long) = "call_queue/$sessionId"
     fun createList(tagId: Long?) = "create_list?tagId=${tagId ?: -1L}"
+    fun contactHistory(contactId: Long, contactName: String) = "history/$contactId/$contactName"
 }
 
 @Composable
@@ -50,9 +53,23 @@ fun TouchBaseNavHost(navController: NavHostController = rememberNavController())
                     onOpenSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
                     onOpenMergeDuplicates = { navController.navigate(Routes.MERGE_DUPLICATES) },
                     onOpenCreateList = { tagId -> navController.navigate(Routes.createList(tagId)) },
-                    onOpenManageLists = { navController.navigate(Routes.MANAGE_LISTS) }
+                    onOpenManageLists = { navController.navigate(Routes.MANAGE_LISTS) },
+                    onOpenHistory = { contactId, contactName ->
+                        navController.navigate(Routes.contactHistory(contactId, contactName))
+                    }
                 )
             }
+        }
+
+        composable(
+            Routes.CONTACT_HISTORY,
+            arguments = listOf(
+                navArgument("contactId") { type = NavType.LongType },
+                navArgument("contactName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
+            ContactHistoryScreen(contactName = contactName, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.MERGE_DUPLICATES) {

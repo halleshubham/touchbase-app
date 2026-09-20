@@ -44,6 +44,7 @@ fun ContactListScreen(
     onOpenMergeDuplicates: () -> Unit,
     onOpenCreateList: (Long?) -> Unit,
     onOpenManageLists: () -> Unit,
+    onOpenHistory: (Long, String) -> Unit,
     viewModel: ContactListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -149,7 +150,8 @@ fun ContactListScreen(
                                 viewModel.toggleTag(cwt.contact.id, tag, assigned)
                             },
                             onCreateTag = { label -> viewModel.createTagAndAssign(cwt.contact.id, label) },
-                            onOpenEvents = { onOpenEvents(cwt.contact.id, cwt.contact.displayName) }
+                            onOpenEvents = { onOpenEvents(cwt.contact.id, cwt.contact.displayName) },
+                            onOpenHistory = { onOpenHistory(cwt.contact.id, cwt.contact.displayName) }
                         )
                         HorizontalDivider()
                     }
@@ -315,7 +317,8 @@ private fun ContactRow(
     templates: List<MessageTemplate>,
     onToggleTag: (Tag, Boolean) -> Unit,
     onCreateTag: (String) -> Unit,
-    onOpenEvents: () -> Unit
+    onOpenEvents: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showTemplatePicker by remember { mutableStateOf(false) }
@@ -376,6 +379,7 @@ private fun ContactRow(
                 Text(if (expanded) "Done" else "Tag")
             }
             TextButton(onClick = onOpenEvents) { Text("Remind") }
+            TextButton(onClick = onOpenHistory) { Text("History") }
         }
 
         if (contactWithTags.tags.isNotEmpty()) {
