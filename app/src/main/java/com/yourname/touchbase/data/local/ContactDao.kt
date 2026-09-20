@@ -51,6 +51,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE systemContactId = :systemId LIMIT 1")
     suspend fun findBySystemId(systemId: Long): Contact?
 
+    @Query("SELECT * FROM contacts WHERE systemContactId IN (:systemIds)")
+    suspend fun findBySystemIds(systemIds: List<Long>): List<Contact>
+
     @Query("SELECT * FROM contacts WHERE id = :id LIMIT 1")
     suspend fun findById(id: Long): Contact?
 

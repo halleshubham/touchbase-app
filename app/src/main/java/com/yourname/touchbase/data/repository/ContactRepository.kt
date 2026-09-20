@@ -29,8 +29,10 @@ class ContactRepository @Inject constructor(
      */
     suspend fun refreshFromSystemContacts() {
         val systemContacts = systemSource.readAllContacts()
+        val existingBySystemId = dao.findBySystemIds(systemContacts.map { it.systemContactId })
+            .associateBy { it.systemContactId }
         val shadowRows = systemContacts.map { sys ->
-            val existing = dao.findBySystemId(sys.systemContactId)
+            val existing = existingBySystemId[sys.systemContactId]
             Contact(
                 id = existing?.id ?: 0,
                 systemContactId = sys.systemContactId,

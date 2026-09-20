@@ -18,6 +18,14 @@ import com.yourname.touchbase.data.local.ContactWithTags
 import com.yourname.touchbase.data.local.MessageTemplate
 import com.yourname.touchbase.data.local.Tag
 import com.yourname.touchbase.util.WhatsAppLauncher
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+private val addedDateFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
+
+private fun formatAddedDate(epochMillis: Long): String =
+    Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(addedDateFormatter)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +95,41 @@ fun ContactListScreen(
                 }
             }
 
+            // Sort-by-added-date row
+            LazyRow(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = uiState.sortOrder == SortOrder.NEWEST_ADDED_FIRST,
+                        onClick = { viewModel.setSortOrder(SortOrder.NEWEST_ADDED_FIRST) },
+                        label = { Text("Newest added") }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = uiState.sortOrder == SortOrder.OLDEST_ADDED_FIRST,
+                        onClick = { viewModel.setSortOrder(SortOrder.OLDEST_ADDED_FIRST) },
+                        label = { Text("Oldest added") }
+                    )
+                }
+            }
+
+            // Filter-by-added-date row
+            LazyRow(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(DateFilter.entries.toList()) { filter ->
+                    FilterChip(
+                        selected = uiState.dateFilter == filter,
+                        onClick = { viewModel.setDateFilter(filter) },
+                        label = { Text(filter.label) }
+                    )
+                }
+            }
+
             if (uiState.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -148,6 +191,11 @@ private fun ContactRow(
             Column(Modifier.weight(1f)) {
                 Text(contactWithTags.contact.displayName, style = MaterialTheme.typography.bodyLarge)
                 Text(contactWithTags.contact.phoneNumber, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Added ${formatAddedDate(contactWithTags.contact.rawTimestampAdded)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Box {
                 TextButton(onClick = {
