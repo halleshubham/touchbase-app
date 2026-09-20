@@ -14,6 +14,7 @@ import com.yourname.touchbase.dedupe.MergeDuplicatesScreen
 import com.yourname.touchbase.ui.contacts.ContactListScreen
 import com.yourname.touchbase.ui.contacts.ContactsPermissionGate
 import com.yourname.touchbase.ui.contacts.CreateListScreen
+import com.yourname.touchbase.ui.contacts.ManageListsScreen
 import com.yourname.touchbase.ui.events.EventScreen
 import com.yourname.touchbase.ui.sync.SyncSettingsScreen
 import com.yourname.touchbase.ui.templates.TemplateScreen
@@ -26,10 +27,12 @@ object Routes {
     const val CALL_QUEUE = "call_queue/{sessionId}"
     const val SYNC_SETTINGS = "sync_settings"
     const val MERGE_DUPLICATES = "merge_duplicates"
-    const val CREATE_LIST = "create_list"
+    const val CREATE_LIST = "create_list?tagId={tagId}"
+    const val MANAGE_LISTS = "manage_lists"
 
     fun events(contactId: Long, contactName: String) = "events/$contactId/$contactName"
     fun callQueue(sessionId: Long) = "call_queue/$sessionId"
+    fun createList(tagId: Long?) = "create_list?tagId=${tagId ?: -1L}"
 }
 
 @Composable
@@ -46,7 +49,8 @@ fun TouchBaseNavHost(navController: NavHostController = rememberNavController())
                     onOpenQueueBuilder = { navController.navigate(Routes.QUEUE_BUILDER) },
                     onOpenSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
                     onOpenMergeDuplicates = { navController.navigate(Routes.MERGE_DUPLICATES) },
-                    onOpenCreateList = { navController.navigate(Routes.CREATE_LIST) }
+                    onOpenCreateList = { tagId -> navController.navigate(Routes.createList(tagId)) },
+                    onOpenManageLists = { navController.navigate(Routes.MANAGE_LISTS) }
                 )
             }
         }
@@ -57,9 +61,21 @@ fun TouchBaseNavHost(navController: NavHostController = rememberNavController())
             }
         }
 
-        composable(Routes.CREATE_LIST) {
+        composable(
+            Routes.CREATE_LIST,
+            arguments = listOf(navArgument("tagId") { type = NavType.LongType; defaultValue = -1L })
+        ) {
             ContactsPermissionGate {
                 CreateListScreen(onDone = { navController.popBackStack() })
+            }
+        }
+
+        composable(Routes.MANAGE_LISTS) {
+            ContactsPermissionGate {
+                ManageListsScreen(
+                    onManageMembers = { tagId -> navController.navigate(Routes.createList(tagId)) },
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
 

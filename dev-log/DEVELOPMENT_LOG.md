@@ -158,6 +158,19 @@ explaining it in place.
   specifically for `GOOGLE_ACCOUNT_TYPE` ("com.google", exposed from
   AccountsHelper).
 
+- **List/tag rename+delete were missing entirely.** Tags had no rename or
+  delete in ContactDao at all - only insert. SavedFilter had delete but no
+  update. Added both, plus a new "Manage lists" screen (overflow menu)
+  listing both kinds of "list" with rename/delete, and "Manage members"
+  for tags. Considered long-press on the filter chips instead, but nested
+  clickable/combinedClickable on top of FilterChip's own internal
+  clickable is fragile in Compose (the innermost one tends to win the
+  gesture) - a dedicated screen is both more robust and more discoverable
+  than a hidden gesture. `CreateListScreen` now doubles as the "manage
+  members" editor: nav route takes an optional `tagId` arg
+  (`create_list?tagId={tagId}`), and when present it pre-checks the tag's
+  current members and diffs on submit instead of creating a new tag.
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since

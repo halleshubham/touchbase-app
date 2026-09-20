@@ -61,6 +61,18 @@ interface ContactDao {
     @Query("DELETE FROM contact_tag_cross_ref WHERE contactId = :contactId AND tagId = :tagId")
     suspend fun removeTagFromContact(contactId: Long, tagId: Long)
 
+    @Query("UPDATE tags SET label = :label WHERE id = :tagId")
+    suspend fun renameTag(tagId: Long, label: String)
+
+    @Query("DELETE FROM tags WHERE id = :tagId")
+    suspend fun deleteTagById(tagId: Long)
+
+    @Query("DELETE FROM contact_tag_cross_ref WHERE tagId = :tagId")
+    suspend fun removeAllContactsFromTag(tagId: Long)
+
+    @Query("SELECT contactId FROM contact_tag_cross_ref WHERE tagId = :tagId")
+    suspend fun getContactIdsForTag(tagId: Long): List<Long>
+
     @Query("SELECT * FROM contacts WHERE systemContactId = :systemId LIMIT 1")
     suspend fun findBySystemId(systemId: Long): Contact?
 

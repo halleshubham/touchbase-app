@@ -16,22 +16,25 @@ fun CreateListScreen(onDone: () -> Unit, viewModel: CreateListViewModel = hiltVi
     val state by viewModel.uiState.collectAsState()
     var showNameDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.created) { if (state.created) onDone() }
+    LaunchedEffect(state.done) { if (state.done) onDone() }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create list from contacts") },
+                title = { Text(if (state.isEditing) "Manage list members" else "Create list from contacts") },
                 navigationIcon = { TextButton(onClick = onDone) { Text("Cancel") } }
             )
         },
         bottomBar = {
             Button(
-                onClick = { showNameDialog = true },
-                enabled = state.selectedContactIds.isNotEmpty(),
+                onClick = { if (state.isEditing) viewModel.updateExistingList() else showNameDialog = true },
+                enabled = state.isEditing || state.selectedContactIds.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().padding(16.dp)
             ) {
-                Text("Create list (${state.selectedContactIds.size} selected)")
+                Text(
+                    if (state.isEditing) "Update list (${state.selectedContactIds.size} selected)"
+                    else "Create list (${state.selectedContactIds.size} selected)"
+                )
             }
         }
     ) { padding ->

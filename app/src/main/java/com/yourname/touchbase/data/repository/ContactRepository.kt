@@ -95,12 +95,34 @@ class ContactRepository @Inject constructor(
     suspend fun removeTag(contactId: Long, tagId: Long) =
         dao.removeTagFromContact(contactId, tagId)
 
+    suspend fun renameTag(tagId: Long, label: String) = dao.renameTag(tagId, label)
+
+    // Cross-refs have no FK cascade declared, so clear them explicitly before dropping the tag row -
+    // see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+    suspend fun deleteTag(tagId: Long) {
+        dao.removeAllContactsFromTag(tagId)
+        dao.deleteTagById(tagId)
+    }
+
+    suspend fun getContactIdsForTag(tagId: Long): List<Long> = dao.getContactIdsForTag(tagId)
+
+    suspend fun updateTagMembers(tagId: Long, newContactIds: Set<Long>) {
+        val current = dao.getContactIdsForTag(tagId).toSet()
+        val toAdd = newContactIds - current
+        val toRemove = current - newContactIds
+        if (toAdd.isNotEmpty()) dao.addTagToContacts(toAdd.map { ContactTagCrossRef(it, tagId) })
+        toRemove.forEach { dao.removeTagFromContact(it, tagId) }
+    }
+
     fun observeSavedFilters(): Flow<List<SavedFilter>> = savedFilterDao.observeAll()
 
     suspend fun saveFilter(name: String, tagId: Long?, dateFilterName: String, sortOrderName: String): Long =
         savedFilterDao.insert(
             SavedFilter(name = name, tagId = tagId, dateFilter = dateFilterName, sortOrder = sortOrderName)
         )
+
+    suspend fun renameSavedFilter(filter: SavedFilter, newName: String) =
+        savedFilterDao.update(filter.copy(name = newName))
 
     suspend fun deleteFilter(filter: SavedFilter) = savedFilterDao.delete(filter)
 }

@@ -1,5 +1,6 @@
 package com.yourname.touchbase.ui.contacts
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourname.touchbase.data.local.ContactWithTags
@@ -17,32 +18,44 @@ data class CreateListUiState(
     val query: String = "",
     val results: List<ContactWithTags> = emptyList(),
     val selectedContactIds: Set<Long> = emptySet(),
-    val created: Boolean = false
+    val isEditing: Boolean = false,
+    val done: Boolean = false
 )
 
 // Needs the full contact list, not paged - search has to scan everything, not one page at a time.
 @HiltViewModel
 class CreateListViewModel @Inject constructor(
-    private val repository: ContactRepository
+    private val repository: ContactRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val editTagId: Long? = savedStateHandle.get<Long>("tagId")?.takeIf { it != -1L }
 
     private val _query = MutableStateFlow("")
     private val _selectedContactIds = MutableStateFlow<Set<Long>>(emptySet())
-    private val _created = MutableStateFlow(false)
+    private val _done = MutableStateFlow(false)
+
+    init {
+        editTagId?.let { tagId ->
+            viewModelScope.launch {
+                _selectedContactIds.value = repository.getContactIdsForTag(tagId).toSet()
+            }
+        }
+    }
 
     val uiState: StateFlow<CreateListUiState> = combine(
         repository.observeContacts(),
         _query,
         _selectedContactIds,
-        _created
-    ) { contacts, query, selected, created ->
+        _done
+    ) { contacts, query, selected, done ->
         val results = if (query.isBlank()) contacts
         else contacts.filter {
             it.contact.displayName.contains(query, ignoreCase = true) ||
                 it.contact.phoneNumber.contains(query)
         }
-        CreateListUiState(query, results, selected, created)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CreateListUiState())
+        CreateListUiState(query, results, selected, editTagId != null, done)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CreateListUiState(isEditing = editTagId != null))
 
     fun setQuery(query: String) {
         _query.value = query
@@ -59,7 +72,15 @@ class CreateListViewModel @Inject constructor(
         if (ids.isEmpty() || name.isBlank()) return
         viewModelScope.launch {
             repository.createTagWithContacts(name, ids.toList())
-            _created.value = true
+            _done.value = true
+        }
+    }
+
+    fun updateExistingList() {
+        val tagId = editTagId ?: return
+        viewModelScope.launch {
+            repository.updateTagMembers(tagId, _selectedContactIds.value)
+            _done.value = true
         }
     }
 }

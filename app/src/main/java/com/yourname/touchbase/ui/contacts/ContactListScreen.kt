@@ -42,7 +42,8 @@ fun ContactListScreen(
     onOpenQueueBuilder: () -> Unit,
     onOpenSyncSettings: () -> Unit,
     onOpenMergeDuplicates: () -> Unit,
-    onOpenCreateList: () -> Unit,
+    onOpenCreateList: (Long?) -> Unit,
+    onOpenManageLists: () -> Unit,
     viewModel: ContactListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -82,7 +83,10 @@ fun ContactListScreen(
                                 showMenu = false; onOpenMergeDuplicates()
                             })
                             DropdownMenuItem(text = { Text("Create list from contacts") }, onClick = {
-                                showMenu = false; onOpenCreateList()
+                                showMenu = false; onOpenCreateList(null)
+                            })
+                            DropdownMenuItem(text = { Text("Manage lists") }, onClick = {
+                                showMenu = false; onOpenManageLists()
                             })
                         }
                     }

@@ -180,4 +180,19 @@ class ContactListViewModel @Inject constructor(
             else repository.assignTag(contactId, tag.id)
         }
     }
+
+    fun renameTag(tagId: Long, label: String) {
+        viewModelScope.launch { repository.renameTag(tagId, label) }
+    }
+
+    fun deleteTag(tagId: Long) {
+        viewModelScope.launch {
+            if (_tagFilter.value == tagId) _tagFilter.value = null
+            repository.deleteTag(tagId)
+        }
+    }
+
+    fun renameSavedFilter(filter: SavedFilter, newName: String) {
+        viewModelScope.launch { repository.renameSavedFilter(filter, newName) }
+    }
 }

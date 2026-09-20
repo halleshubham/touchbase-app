@@ -6,6 +6,7 @@ import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -30,6 +31,9 @@ interface SavedFilterDao {
 
     @Insert
     suspend fun insert(filter: SavedFilter): Long
+
+    @Update
+    suspend fun update(filter: SavedFilter)
 
     @Delete
     suspend fun delete(filter: SavedFilter)
