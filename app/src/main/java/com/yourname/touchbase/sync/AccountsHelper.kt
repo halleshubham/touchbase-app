@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** com.google is Android's account type for Google accounts added under Settings > Accounts. */
-private const val GOOGLE_ACCOUNT_TYPE = "com.google"
+const val GOOGLE_ACCOUNT_TYPE = "com.google"
 
 /**
  * Represents where a contact should be written: an existing synced Google

@@ -4,6 +4,7 @@ import android.content.ContentProviderOperation
 import android.content.Context
 import android.provider.ContactsContract
 import androidx.core.content.contentValuesOf
+import com.yourname.touchbase.sync.GOOGLE_ACCOUNT_TYPE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,7 +87,7 @@ class DuplicateContactsScanner @Inject constructor(
             }
         }
 
-        val rawIdsWithAccount = mutableSetOf<Long>()
+        val rawIdsWithGoogleAccount = mutableSetOf<Long>()
         context.contentResolver.query(
             ContactsContract.RawContacts.CONTENT_URI,
             arrayOf(ContactsContract.RawContacts._ID, ContactsContract.RawContacts.ACCOUNT_TYPE),
@@ -95,7 +96,7 @@ class DuplicateContactsScanner @Inject constructor(
             val idIdx = cursor.getColumnIndexOrThrow(ContactsContract.RawContacts._ID)
             val typeIdx = cursor.getColumnIndexOrThrow(ContactsContract.RawContacts.ACCOUNT_TYPE)
             while (cursor.moveToNext()) {
-                if (cursor.getString(typeIdx) != null) rawIdsWithAccount += cursor.getLong(idIdx)
+                if (cursor.getString(typeIdx) == GOOGLE_ACCOUNT_TYPE) rawIdsWithGoogleAccount += cursor.getLong(idIdx)
             }
         }
 
@@ -105,10 +106,10 @@ class DuplicateContactsScanner @Inject constructor(
                 contactId = c.contactId,
                 displayName = c.displayName,
                 rawContactIds = distinctRawIds,
-                preferredRawContactId = distinctRawIds.firstOrNull { it in rawIdsWithAccount } ?: distinctRawIds.first(),
+                preferredRawContactId = distinctRawIds.firstOrNull { it in rawIdsWithGoogleAccount } ?: distinctRawIds.first(),
                 phoneNumbers = c.phoneNumbers.distinct(),
                 emails = c.emails.distinct(),
-                hasGoogleAccount = distinctRawIds.any { it in rawIdsWithAccount }
+                hasGoogleAccount = distinctRawIds.any { it in rawIdsWithGoogleAccount }
             )
         }
 

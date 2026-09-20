@@ -150,6 +150,14 @@ explaining it in place.
   progress feedback, which is indistinguishable from actually being stuck.
   Added "Merging group X of Y" progress instead of a bare spinner.
 
+- **Merge "has account" check was too broad.** `DuplicateContactsScanner`
+  treated ANY non-null `ACCOUNT_TYPE` (Samsung, Exchange, etc.) as
+  `hasGoogleAccount`, so a contact linked only to a non-Google account
+  could get picked as the merge survivor / preferredRawContactId target,
+  meaning copied data would never actually reach Google. Fixed to check
+  specifically for `GOOGLE_ACCOUNT_TYPE` ("com.google", exposed from
+  AccountsHelper).
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since
