@@ -112,11 +112,17 @@ fun ContactListScreen(
                 }
             }
 
-            if (uiState.isLoading) {
+            // Only block on the true first load; once there's data, keep the
+            // LazyColumn mounted across background refreshes so its scroll
+            // position survives - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+            if (uiState.isLoading && pagingItems.itemCount == 0) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
+                if (uiState.isLoading) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(
                         count = pagingItems.itemCount,

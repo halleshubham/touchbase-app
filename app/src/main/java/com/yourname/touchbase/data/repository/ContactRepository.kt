@@ -42,19 +42,23 @@ class ContactRepository @Inject constructor(
         val systemContacts = systemSource.readAllContacts()
         val existingBySystemId = dao.findBySystemIds(systemContacts.map { it.systemContactId })
             .associateBy { it.systemContactId }
-        val shadowRows = systemContacts.map { sys ->
+        // Only rows that are new or actually changed - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+        val changedRows = systemContacts.mapNotNull { sys ->
             val existing = existingBySystemId[sys.systemContactId]
-            Contact(
-                id = existing?.id ?: 0,
-                systemContactId = sys.systemContactId,
-                displayName = sys.displayName,
-                phoneNumber = sys.phoneNumber,
-                // Stamped once on first sight, never overwritten - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
-                rawTimestampAdded = existing?.rawTimestampAdded ?: sys.lastUpdatedTimestamp,
-                syncStatus = existing?.syncStatus ?: SyncStatus.SYNCED
-            )
+            if (existing != null && existing.displayName == sys.displayName && existing.phoneNumber == sys.phoneNumber) {
+                null
+            } else {
+                Contact(
+                    id = existing?.id ?: 0,
+                    systemContactId = sys.systemContactId,
+                    displayName = sys.displayName,
+                    phoneNumber = sys.phoneNumber,
+                    rawTimestampAdded = existing?.rawTimestampAdded ?: sys.lastUpdatedTimestamp,
+                    syncStatus = existing?.syncStatus ?: SyncStatus.SYNCED
+                )
+            }
         }
-        dao.upsertAll(shadowRows)
+        if (changedRows.isNotEmpty()) dao.upsertAll(changedRows)
     }
 
     /**
