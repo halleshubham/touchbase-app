@@ -140,6 +140,16 @@ explaining it in place.
   one when present) and target that instead. Also added TYPE columns to
   copied phone/email rows to match the rest of the codebase's own inserts.
 
+- **Merge screen looked stuck.** `writeBackup()` did synchronous file I/O
+  but wasn't suspend/`Dispatchers.IO` like every other call in this
+  feature - made it suspend + IO-dispatched (correct regardless, but on
+  its own a small text write isn't slow enough to explain a real hang).
+  Confirmed hang wasn't a frozen main thread (the spinner kept animating),
+  so the real cause is processing many duplicate groups sequentially - each
+  merge is a real IPC round-trip to the Contacts provider - with zero
+  progress feedback, which is indistinguishable from actually being stuck.
+  Added "Merging group X of Y" progress instead of a bare spinner.
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since

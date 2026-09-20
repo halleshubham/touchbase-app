@@ -34,7 +34,9 @@ fun MergeDuplicatesScreen(onBack: () -> Unit, viewModel: MergeDuplicatesViewMode
                     onToggle = viewModel::toggleGroup,
                     onMerge = viewModel::mergeSelected
                 )
-                is MergeDuplicatesUiState.Merging -> LoadingContent("Merging and backing up…")
+                is MergeDuplicatesUiState.Merging -> LoadingContent(
+                    if (s.done == 0) "Writing backup…" else "Merging group ${s.done} of ${s.total}…"
+                )
                 is MergeDuplicatesUiState.Done -> DoneContent(s, onDone = onBack)
                 is MergeDuplicatesUiState.Error -> ErrorContent(s, onDone = onBack)
             }

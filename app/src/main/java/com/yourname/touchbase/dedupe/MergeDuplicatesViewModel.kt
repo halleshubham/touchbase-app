@@ -17,7 +17,7 @@ sealed interface MergeDuplicatesUiState {
     data object Idle : MergeDuplicatesUiState
     data object Scanning : MergeDuplicatesUiState
     data class Reviewing(val groups: List<DuplicateGroup>, val selected: Set<Int>) : MergeDuplicatesUiState
-    data object Merging : MergeDuplicatesUiState
+    data class Merging(val done: Int, val total: Int) : MergeDuplicatesUiState
     data class Done(val mergedCount: Int, val removedCount: Int, val backupPath: String) : MergeDuplicatesUiState
     data class Error(val message: String, val mergedSoFar: Int, val backupPath: String) : MergeDuplicatesUiState
 }
@@ -47,10 +47,10 @@ class MergeDuplicatesViewModel @Inject constructor(
 
     fun mergeSelected() {
         val state = _uiState.value as? MergeDuplicatesUiState.Reviewing ?: return
+        val total = state.selected.size
         viewModelScope.launch {
-            _uiState.value = MergeDuplicatesUiState.Merging
-            // One backup file for the whole batch, written before any group is
-            // touched - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+            _uiState.value = MergeDuplicatesUiState.Merging(0, total)
+            // One backup file for the whole batch, written before any group is touched - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
             val backupPath = scanner.writeBackup(state.selected.flatMap { state.groups[it].cards })
             var removedCount = 0
             var mergedCount = 0
@@ -59,6 +59,7 @@ class MergeDuplicatesViewModel @Inject constructor(
                     val outcome = scanner.mergeGroup(state.groups[index])
                     removedCount += outcome.removedContactIds.size
                     mergedCount++
+                    _uiState.value = MergeDuplicatesUiState.Merging(mergedCount, total)
                 }
                 requestGoogleSync()
                 _uiState.value = MergeDuplicatesUiState.Done(mergedCount, removedCount, backupPath)

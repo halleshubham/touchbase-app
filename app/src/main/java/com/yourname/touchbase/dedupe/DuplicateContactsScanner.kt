@@ -207,13 +207,8 @@ class DuplicateContactsScanner @Inject constructor(
     private fun escapeVCardText(value: String): String =
         value.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
 
-    /**
-     * Writes one vCard 3.0 file covering every card passed in, meant to be
-     * re-importable via Contacts app "Import from .vcf" if a merge needs to
-     * be undone - see dev-log/DEVELOPMENT_LOG.md (2026-09-20). Call this
-     * ONCE for the whole batch, before mergeGroup() runs any deletes.
-     */
-    fun writeBackup(cards: List<ContactCard>): String {
+    // One re-importable vCard 3.0 file for the whole batch - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+    suspend fun writeBackup(cards: List<ContactCard>): String = withContext(Dispatchers.IO) {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val file = File(dir, "touchbase_dedupe_backup_$stamp.vcf")
@@ -230,7 +225,7 @@ class DuplicateContactsScanner @Inject constructor(
             }
         }
         file.writeText(body)
-        return file.absolutePath
+        file.absolutePath
     }
 
     private class MutableCard(val contactId: Long, val displayName: String) {
