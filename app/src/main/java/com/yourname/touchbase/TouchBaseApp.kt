@@ -7,7 +7,6 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.yourname.touchbase.reminders.REMINDER_CHANNEL_ID
-import com.yourname.touchbase.sync.ContactsContentObserver
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -15,7 +14,6 @@ import javax.inject.Inject
 class TouchBaseApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
-    @Inject lateinit var contactsContentObserver: ContactsContentObserver
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -23,11 +21,11 @@ class TouchBaseApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
-        // Starts watching ContactsContract immediately so any change — from
-        // this app or the system Contacts app — triggers a near-real-time
-        // sync (see ContactsContentObserver). No-ops harmlessly if the user
-        // hasn't signed into Google yet; SyncWorker checks sign-in status.
-        contactsContentObserver.startWatching()
+        // ContactsContentObserver.startWatching() is NOT started here: it
+        // registers on ContactsContract, which requires READ_CONTACTS/
+        // WRITE_CONTACTS - permissions that don't exist yet at process
+        // startup. It's started from ContactListViewModel instead, which is
+        // only ever constructed behind ContactsPermissionGate.
     }
 
     private fun createNotificationChannels() {

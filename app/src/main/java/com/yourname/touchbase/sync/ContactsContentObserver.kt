@@ -1,10 +1,13 @@
 package com.yourname.touchbase.sync
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
+import androidx.core.content.ContextCompat
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -26,6 +29,9 @@ class ContactsContentObserver @Inject constructor(
 
     fun startWatching() {
         if (observer != null) return
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
         val handler = Handler(Looper.getMainLooper())
         val obs = object : ContentObserver(handler) {
             override fun onChange(selfChange: Boolean) {

@@ -8,6 +8,7 @@ import com.yourname.touchbase.data.local.MessageTemplateDao
 import com.yourname.touchbase.data.local.Tag
 import com.yourname.touchbase.data.repository.ContactRepository
 import com.yourname.touchbase.sync.AccountsHelper
+import com.yourname.touchbase.sync.ContactsContentObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,8 +31,16 @@ data class ContactListUiState(
 class ContactListViewModel @Inject constructor(
     private val repository: ContactRepository,
     private val templateDao: MessageTemplateDao,
-    private val accountsHelper: AccountsHelper
+    private val accountsHelper: AccountsHelper,
+    private val contactsContentObserver: ContactsContentObserver
 ) : ViewModel() {
+
+    init {
+        // Safe to start here (unlike in TouchBaseApp.onCreate): this
+        // ViewModel is only ever constructed inside ContactsPermissionGate,
+        // so READ_CONTACTS/WRITE_CONTACTS are already granted by this point.
+        contactsContentObserver.startWatching()
+    }
 
     private val _isLoading = MutableStateFlow(true)
     private val _tagFilter = MutableStateFlow<Long?>(null)
