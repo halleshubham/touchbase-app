@@ -11,9 +11,10 @@ import androidx.room.RoomDatabase
         MessageTemplate::class,
         Event::class,
         CallSession::class,
-        CallSessionItem::class
+        CallSessionItem::class,
+        SavedFilter::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class TouchBaseDatabase : RoomDatabase() {
@@ -21,4 +22,5 @@ abstract class TouchBaseDatabase : RoomDatabase() {
     abstract fun messageTemplateDao(): MessageTemplateDao
     abstract fun eventDao(): EventDao
     abstract fun callSessionDao(): CallSessionDao
+    abstract fun savedFilterDao(): SavedFilterDao
 }

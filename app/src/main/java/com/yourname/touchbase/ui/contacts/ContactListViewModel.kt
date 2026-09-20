@@ -9,6 +9,7 @@ import androidx.paging.cachedIn
 import com.yourname.touchbase.data.local.ContactWithTags
 import com.yourname.touchbase.data.local.MessageTemplate
 import com.yourname.touchbase.data.local.MessageTemplateDao
+import com.yourname.touchbase.data.local.SavedFilter
 import com.yourname.touchbase.data.local.Tag
 import com.yourname.touchbase.data.repository.ContactRepository
 import com.yourname.touchbase.sync.AccountsHelper
@@ -48,6 +49,7 @@ data class ContactListUiState(
     val selectedTagFilter: Long? = null,
     val sortOrder: SortOrder = SortOrder.NEWEST_ADDED_FIRST,
     val dateFilter: DateFilter = DateFilter.ALL_TIME,
+    val savedFilters: List<SavedFilter> = emptyList(),
     val quickAddAccountLabel: String = "Phone only (no sync)"
 )
 
@@ -105,8 +107,9 @@ class ContactListViewModel @Inject constructor(
         repository.observeTags(),
         templateDao.observeAll(),
         _isLoading,
-        controls
-    ) { tags, templates, loading, controls ->
+        controls,
+        repository.observeSavedFilters()
+    ) { tags, templates, loading, controls, savedFilters ->
         ContactListUiState(
             allTags = tags,
             templates = templates,
@@ -114,6 +117,7 @@ class ContactListViewModel @Inject constructor(
             selectedTagFilter = controls.tagFilter,
             sortOrder = controls.sortOrder,
             dateFilter = controls.dateFilter,
+            savedFilters = savedFilters,
             quickAddAccountLabel = accountsHelper.getPreferredAccount().displayLabel
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ContactListUiState())
@@ -136,6 +140,28 @@ class ContactListViewModel @Inject constructor(
 
     fun setDateFilter(filter: DateFilter) {
         _dateFilter.value = filter
+    }
+
+    /** Saves the current tag/date/sort combination as a named, reusable list. */
+    fun saveCurrentFilterAsList(name: String) {
+        viewModelScope.launch {
+            repository.saveFilter(
+                name = name,
+                tagId = _tagFilter.value,
+                dateFilterName = _dateFilter.value.name,
+                sortOrderName = _sortOrder.value.name
+            )
+        }
+    }
+
+    fun applySavedFilter(filter: SavedFilter) {
+        _tagFilter.value = filter.tagId
+        _dateFilter.value = DateFilter.valueOf(filter.dateFilter)
+        _sortOrder.value = SortOrder.valueOf(filter.sortOrder)
+    }
+
+    fun deleteSavedFilter(filter: SavedFilter) {
+        viewModelScope.launch { repository.deleteFilter(filter) }
     }
 
     fun quickAdd(name: String, phone: String) {

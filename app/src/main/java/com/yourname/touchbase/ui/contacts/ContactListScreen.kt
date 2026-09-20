@@ -1,11 +1,14 @@
 package com.yourname.touchbase.ui.contacts
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +22,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.yourname.touchbase.data.local.ContactWithTags
 import com.yourname.touchbase.data.local.MessageTemplate
+import com.yourname.touchbase.data.local.SavedFilter
 import com.yourname.touchbase.data.local.Tag
 import com.yourname.touchbase.util.WhatsAppLauncher
 import java.time.Instant
@@ -43,6 +47,10 @@ fun ContactListScreen(
     val pagingItems = viewModel.pagedContacts.collectAsLazyPagingItems()
     var showQuickAdd by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+
+    val hasNonDefaultFilters = uiState.sortOrder != SortOrder.NEWEST_ADDED_FIRST ||
+        uiState.dateFilter != DateFilter.ALL_TIME
 
     LaunchedEffect(Unit) { viewModel.refreshFromSystemContacts() }
 
@@ -52,6 +60,11 @@ fun ContactListScreen(
                 title = { Text("Contacts") },
                 actions = {
                     TextButton(onClick = onOpenQueueBuilder) { Text("Call queue") }
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        BadgedBox(badge = { if (hasNonDefaultFilters) Badge() }) {
+                            Icon(Icons.Filled.FilterList, contentDescription = "Sort, filter and lists")
+                        }
+                    }
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = "More")
@@ -76,7 +89,9 @@ fun ContactListScreen(
     ) { padding ->
         Column(Modifier.padding(padding)) {
 
-            // Tag filter row
+            // Tag filter row - the most-used control, so it stays visible;
+            // sort/date/saved-lists live behind the filter icon above to
+            // avoid stacking four chip rows on screen at once.
             LazyRow(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -95,41 +110,6 @@ fun ContactListScreen(
                             viewModel.setTagFilter(if (uiState.selectedTagFilter == tag.id) null else tag.id)
                         },
                         label = { Text(tag.label) }
-                    )
-                }
-            }
-
-            // Sort-by-added-date row
-            LazyRow(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = uiState.sortOrder == SortOrder.NEWEST_ADDED_FIRST,
-                        onClick = { viewModel.setSortOrder(SortOrder.NEWEST_ADDED_FIRST) },
-                        label = { Text("Newest added") }
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = uiState.sortOrder == SortOrder.OLDEST_ADDED_FIRST,
-                        onClick = { viewModel.setSortOrder(SortOrder.OLDEST_ADDED_FIRST) },
-                        label = { Text("Oldest added") }
-                    )
-                }
-            }
-
-            // Filter-by-added-date row
-            LazyRow(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(DateFilter.entries.toList()) { filter ->
-                    FilterChip(
-                        selected = uiState.dateFilter == filter,
-                        onClick = { viewModel.setDateFilter(filter) },
-                        label = { Text(filter.label) }
                     )
                 }
             }
@@ -168,6 +148,18 @@ fun ContactListScreen(
         }
     }
 
+    if (showFilterSheet) {
+        FilterSortSheet(
+            uiState = uiState,
+            onSetSortOrder = viewModel::setSortOrder,
+            onSetDateFilter = viewModel::setDateFilter,
+            onApplySavedFilter = viewModel::applySavedFilter,
+            onDeleteSavedFilter = viewModel::deleteSavedFilter,
+            onSaveCurrentAsList = viewModel::saveCurrentFilterAsList,
+            onDismiss = { showFilterSheet = false }
+        )
+    }
+
     if (showQuickAdd) {
         QuickAddDialog(
             accountLabel = uiState.quickAddAccountLabel,
@@ -179,6 +171,124 @@ fun ContactListScreen(
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSortSheet(
+    uiState: ContactListUiState,
+    onSetSortOrder: (SortOrder) -> Unit,
+    onSetDateFilter: (DateFilter) -> Unit,
+    onApplySavedFilter: (SavedFilter) -> Unit,
+    onDeleteSavedFilter: (SavedFilter) -> Unit,
+    onSaveCurrentAsList: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var showSaveDialog by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Sort", style = MaterialTheme.typography.titleMedium)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = uiState.sortOrder == SortOrder.NEWEST_ADDED_FIRST,
+                    onClick = { onSetSortOrder(SortOrder.NEWEST_ADDED_FIRST) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                ) { Text("Newest added") }
+                SegmentedButton(
+                    selected = uiState.sortOrder == SortOrder.OLDEST_ADDED_FIRST,
+                    onClick = { onSetSortOrder(SortOrder.OLDEST_ADDED_FIRST) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                ) { Text("Oldest added") }
+            }
+
+            Text("Added date", style = MaterialTheme.typography.titleMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DateFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = uiState.dateFilter == filter,
+                        onClick = { onSetDateFilter(filter) },
+                        label = { Text(filter.label) }
+                    )
+                }
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("My lists", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { showSaveDialog = true }) { Text("Save current as list") }
+            }
+
+            if (uiState.savedFilters.isEmpty()) {
+                Text(
+                    "No saved lists yet. Set a tag/date/sort combination above, then save it here to reuse later.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.savedFilters.forEach { filter ->
+                        InputChip(
+                            selected = false,
+                            onClick = { onApplySavedFilter(filter) },
+                            label = { Text(filter.name) },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Delete list",
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { onDeleteSavedFilter(filter) }
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSaveDialog) {
+        SaveListDialog(
+            onDismiss = { showSaveDialog = false },
+            onConfirm = { name ->
+                onSaveCurrentAsList(name)
+                showSaveDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun SaveListDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Save current filters as a list") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("List name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name) }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

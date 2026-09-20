@@ -8,6 +8,7 @@ import com.yourname.touchbase.data.local.ContactDao
 import com.yourname.touchbase.data.local.TouchBaseDatabase
 import com.yourname.touchbase.data.local.EventDao
 import com.yourname.touchbase.data.local.MessageTemplateDao
+import com.yourname.touchbase.data.local.SavedFilterDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,6 +45,9 @@ object AppModule {
 
     @Provides
     fun provideCallSessionDao(db: TouchBaseDatabase): CallSessionDao = db.callSessionDao()
+
+    @Provides
+    fun provideSavedFilterDao(db: TouchBaseDatabase): SavedFilterDao = db.savedFilterDao()
 
     @Provides
     @Singleton

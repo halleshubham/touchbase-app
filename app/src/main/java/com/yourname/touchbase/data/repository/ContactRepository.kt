@@ -5,6 +5,8 @@ import com.yourname.touchbase.data.local.Contact
 import com.yourname.touchbase.data.local.ContactDao
 import com.yourname.touchbase.data.local.ContactTagCrossRef
 import com.yourname.touchbase.data.local.ContactWithTags
+import com.yourname.touchbase.data.local.SavedFilter
+import com.yourname.touchbase.data.local.SavedFilterDao
 import com.yourname.touchbase.data.local.SyncStatus
 import com.yourname.touchbase.data.local.Tag
 import kotlinx.coroutines.flow.Flow
@@ -15,7 +17,8 @@ import javax.inject.Singleton
 @Singleton
 class ContactRepository @Inject constructor(
     private val dao: ContactDao,
-    private val systemSource: SystemContactsSource
+    private val systemSource: SystemContactsSource,
+    private val savedFilterDao: SavedFilterDao
 ) {
 
     fun pagedContacts(
@@ -79,4 +82,13 @@ class ContactRepository @Inject constructor(
 
     suspend fun removeTag(contactId: Long, tagId: Long) =
         dao.removeTagFromContact(contactId, tagId)
+
+    fun observeSavedFilters(): Flow<List<SavedFilter>> = savedFilterDao.observeAll()
+
+    suspend fun saveFilter(name: String, tagId: Long?, dateFilterName: String, sortOrderName: String): Long =
+        savedFilterDao.insert(
+            SavedFilter(name = name, tagId = tagId, dateFilter = dateFilterName, sortOrder = sortOrderName)
+        )
+
+    suspend fun deleteFilter(filter: SavedFilter) = savedFilterDao.delete(filter)
 }
