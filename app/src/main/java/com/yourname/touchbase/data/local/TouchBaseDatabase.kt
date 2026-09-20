@@ -14,7 +14,11 @@ import androidx.room.RoomDatabase
         CallSessionItem::class,
         SavedFilter::class
     ],
-    version = 3,
+    // Bumped without a schema change specifically to force
+    // fallbackToDestructiveMigration() to wipe already-poisoned
+    // rawTimestampAdded values written by the old (buggy) refresh logic -
+    // see ContactRepository.refreshFromSystemContacts().
+    version = 4,
     exportSchema = true
 )
 abstract class TouchBaseDatabase : RoomDatabase() {

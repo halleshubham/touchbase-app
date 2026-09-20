@@ -15,7 +15,12 @@ data class SystemContact(
     val systemContactId: Long,
     val displayName: String,
     val phoneNumber: String,
-    val timesContacted: Long // ContactsContract.CONTACTS_UPDATED_TIMESTAMP proxy
+    // NOT a "date added" - ContactsContract doesn't expose true creation
+    // time. This moves whenever the OS touches the contact for any reason
+    // (a call, a sync, photo/label changes, contact linking), so the
+    // repository only uses it once, the first time a contact is seen -
+    // see ContactRepository.refreshFromSystemContacts().
+    val lastUpdatedTimestamp: Long
 )
 
 /**
@@ -62,7 +67,7 @@ class SystemContactsSource @Inject constructor(
                     systemContactId = contactId,
                     displayName = cursor.getString(nameIdx) ?: "(No name)",
                     phoneNumber = cursor.getString(numberIdx) ?: "",
-                    timesContacted = cursor.getLong(updatedIdx)
+                    lastUpdatedTimestamp = cursor.getLong(updatedIdx)
                 )
             }
         }
