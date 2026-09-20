@@ -125,3 +125,23 @@ explaining it in place.
   the backup file itself. Other fields (notes, photos, addresses,
   organization) are lost. A real photo/note preservation pass is future
   work.
+
+- **Merge backup made re-importable + single-file.** Rewrote the vCard
+  writer to proper vCard 3.0 (N + FN, CRLF line endings, text escaping)
+  and moved it out of `mergeGroup()` so ONE file covers the whole batch,
+  written before any group's deletes run - not one file per group
+  interleaved with each group's own deletes.
+
+- **Merge review: raw-contact targeting bug.** `mergeGroup()` copied
+  phone/email data onto `primary.rawContactIds.first()`, which is
+  arbitrary query order - if the account-linked raw contact wasn't first,
+  copied data landed on a local-only raw contact and would never reach
+  Google. Added `ContactCard.preferredRawContactId` (the account-linked
+  one when present) and target that instead. Also added TYPE columns to
+  copied phone/email rows to match the rest of the codebase's own inserts.
+
+- **"Create list from contacts."** Search + multi-select + name a list.
+  This reuses Tags (bulk-create a tag, bulk-assign it to the selected
+  contact ids) rather than a second per-contact membership system, since
+  "Lists" were already defined as saved filter presets, not per-contact
+  data - see the "Saved lists" entry above.

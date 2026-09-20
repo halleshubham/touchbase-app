@@ -55,6 +55,9 @@ interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addTagToContact(crossRef: ContactTagCrossRef)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addTagToContacts(crossRefs: List<ContactTagCrossRef>)
+
     @Query("DELETE FROM contact_tag_cross_ref WHERE contactId = :contactId AND tagId = :tagId")
     suspend fun removeTagFromContact(contactId: Long, tagId: Long)
 

@@ -85,6 +85,13 @@ class ContactRepository @Inject constructor(
     suspend fun assignTag(contactId: Long, tagId: Long) =
         dao.addTagToContact(ContactTagCrossRef(contactId, tagId))
 
+    // "Create a list from selected contacts" is bulk tag assignment - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+    suspend fun createTagWithContacts(label: String, contactIds: List<Long>): Long {
+        val tagId = createTag(label)
+        dao.addTagToContacts(contactIds.map { ContactTagCrossRef(it, tagId) })
+        return tagId
+    }
+
     suspend fun removeTag(contactId: Long, tagId: Long) =
         dao.removeTagFromContact(contactId, tagId)
 
