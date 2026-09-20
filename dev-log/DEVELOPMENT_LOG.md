@@ -181,6 +181,15 @@ explaining it in place.
   not per-contact) is still unused - a "recent sessions" list is a
   natural follow-up if wanted.
 
+- **"Set reminder" added to the call feedback sheet.** README had already
+  flagged this as a known gap ("Callback later doesn't yet auto-create a
+  reminder"). Added a "Set reminder" action to the feedback sheet backed
+  by a Material3 DatePicker, reusing the existing `EventViewModel.createEvent()`
+  (same code path as the Events screen) rather than a parallel reminder
+  path. `DatePicker.selectedDateMillis` returns UTC midnight for the picked
+  date; reinterpreted as local 9am so the reminder fires the day the user
+  actually picked rather than shifting by timezone offset.
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since

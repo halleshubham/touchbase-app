@@ -15,17 +15,25 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.yourname.touchbase.call.CallStateWatcher
 import com.yourname.touchbase.data.local.CallFeedback
 import com.yourname.touchbase.data.local.CallOutcome
+import com.yourname.touchbase.data.local.EventType
 import com.yourname.touchbase.data.local.QueueRow
+import com.yourname.touchbase.data.local.Recurrence
+import com.yourname.touchbase.ui.events.EventViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CallQueueScreen(
     onFinished: () -> Unit,
-    viewModel: CallQueueViewModel = hiltViewModel()
+    viewModel: CallQueueViewModel = hiltViewModel(),
+    eventViewModel: EventViewModel = hiltViewModel()
 ) {
     val queue by viewModel.queue.collectAsState()
     val context = LocalContext.current
     var feedbackTarget by remember { mutableStateOf<QueueRow?>(null) }
+    var reminderTarget by remember { mutableStateOf<QueueRow?>(null) }
 
     val pending = queue.filter { it.item.outcome == CallOutcome.PENDING }
     val current = pending.firstOrNull()
@@ -105,6 +113,24 @@ fun CallQueueScreen(
             onSubmit = { feedback, note ->
                 viewModel.recordFeedback(row.item, feedback, note)
                 feedbackTarget = null
+            },
+            onSetReminder = { reminderTarget = row }
+        )
+    }
+
+    reminderTarget?.let { row ->
+        ReminderDatePickerDialog(
+            onDismiss = { reminderTarget = null },
+            onConfirm = { epochMillis ->
+                eventViewModel.createEvent(
+                    contactId = row.contact.id,
+                    label = "Callback",
+                    type = EventType.FOLLOW_UP,
+                    epochMillis = epochMillis,
+                    recurrence = Recurrence.NONE,
+                    reminderLeadMinutes = 0
+                )
+                reminderTarget = null
             }
         )
     }
@@ -115,7 +141,8 @@ fun CallQueueScreen(
 private fun FeedbackSheet(
     contactName: String,
     onDismiss: () -> Unit,
-    onSubmit: (CallFeedback, String?) -> Unit
+    onSubmit: (CallFeedback, String?) -> Unit,
+    onSetReminder: () -> Unit
 ) {
     var note by remember { mutableStateOf("") }
     var showNoteField by remember { mutableStateOf(false) }
@@ -135,8 +162,11 @@ private fun FeedbackSheet(
             }
 
             Spacer(Modifier.height(8.dp))
-            TextButton(onClick = { showNoteField = !showNoteField }) {
-                Text(if (showNoteField) "Hide note" else "Add note")
+            Row {
+                TextButton(onClick = { showNoteField = !showNoteField }) {
+                    Text(if (showNoteField) "Hide note" else "Add note")
+                }
+                TextButton(onClick = onSetReminder) { Text("Set reminder") }
             }
             if (showNoteField) {
                 OutlinedTextField(
@@ -148,6 +178,28 @@ private fun FeedbackSheet(
             }
             Spacer(Modifier.height(12.dp))
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderDatePickerDialog(onDismiss: () -> Unit, onConfirm: (Long) -> Unit) {
+    val datePickerState = rememberDatePickerState()
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                // Reinterpret DatePicker's UTC-midnight as local 9am - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+                datePickerState.selectedDateMillis?.let { utcMidnight ->
+                    val localDate = Instant.ofEpochMilli(utcMidnight).atZone(ZoneOffset.UTC).toLocalDate()
+                    val triggerMillis = localDate.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    onConfirm(triggerMillis)
+                }
+            }) { Text("Set reminder") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    ) {
+        DatePicker(state = datePickerState)
     }
 }
 
