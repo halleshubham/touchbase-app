@@ -85,3 +85,43 @@ explaining it in place.
   Deliberate for now - pre-release app, no installed base worth writing
   real migrations for yet. Revisit before any real release: switch to
   proper `Migration` objects so a schema bump doesn't wipe user data.
+
+- **Scroll flicker, two separate causes.** (1)
+  `refreshFromSystemContacts()` re-upserted every contact on every screen
+  visit even when nothing changed, and Room's `@Upsert` writes
+  unconditionally - that invalidates Room's change tracking for the
+  `contacts` table, which tears down the active `PagingSource` mid-session.
+  Fixed by only writing rows that are new or actually changed. (2) The
+  screen unmounted its `LazyColumn` (swapping to a spinner) on every
+  refresh, discarding scroll position every time you navigated back. Fixed
+  by keeping the list mounted once it has data; only the true first load
+  blocks with a full-screen spinner.
+
+- **Tag creation was unreachable.** `createTag()` existed on the ViewModel
+  and repository but no screen ever called it - the "Tag" button only
+  toggled *existing* tags, and none could ever be created. Added a "+ New
+  tag" chip in the expanded tag row that creates and assigns a tag in one
+  step (`createTagAndAssign`).
+
+- **Merge duplicate contacts.** New `dedupe` package: scans for contacts
+  Android's own aggregation didn't already combine (usually differing
+  display names) but that share a normalized phone number, using
+  union-find so a contact matching two different duplicates only appears
+  in one group. User reviews and picks which groups to merge; chosen
+  approach is full consolidate-and-delete (not the non-destructive
+  `AggregationExceptions` link), matched by phone number only. On merge:
+  survivor picked by (has a Google account) then (richest data); phone/
+  email not already on the survivor are copied over *specifically onto its
+  account-linked raw contact* (not just `rawContactIds.first()` - an
+  earlier version of this code got that wrong, which would have silently
+  copied data onto a non-syncing local raw contact); losing raw contacts
+  are deleted; a Google sync is requested afterward via the existing
+  `SyncWorker`. Before any deletion, one re-importable vCard 3.0 backup
+  (`.vcf`, proper `N`/`FN`, CRLF line endings, text escaping) covering
+  every contact in the whole batch is written to external app storage -
+  restorable via Contacts app > Import if a merge turns out wrong.
+  Known limitation: only name, phone numbers and emails are preserved for
+  a removed contact - both in what gets copied onto the survivor and in
+  the backup file itself. Other fields (notes, photos, addresses,
+  organization) are lost. A real photo/note preservation pass is future
+  work.

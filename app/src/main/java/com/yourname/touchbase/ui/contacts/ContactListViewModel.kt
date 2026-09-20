@@ -167,6 +167,13 @@ class ContactListViewModel @Inject constructor(
         viewModelScope.launch { repository.createTag(label) }
     }
 
+    fun createTagAndAssign(contactId: Long, label: String) {
+        viewModelScope.launch {
+            val tagId = repository.createTag(label)
+            repository.assignTag(contactId, tagId)
+        }
+    }
+
     fun toggleTag(contactId: Long, tag: Tag, isCurrentlyAssigned: Boolean) {
         viewModelScope.launch {
             if (isCurrentlyAssigned) repository.removeTag(contactId, tag.id)

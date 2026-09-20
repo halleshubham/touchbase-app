@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.yourname.touchbase.ui.callqueue.CallQueuePermissionGate
 import com.yourname.touchbase.ui.callqueue.CallQueueScreen
 import com.yourname.touchbase.ui.callqueue.QueueBuilderScreen
+import com.yourname.touchbase.dedupe.MergeDuplicatesScreen
 import com.yourname.touchbase.ui.contacts.ContactListScreen
 import com.yourname.touchbase.ui.contacts.ContactsPermissionGate
 import com.yourname.touchbase.ui.events.EventScreen
@@ -23,6 +24,7 @@ object Routes {
     const val QUEUE_BUILDER = "queue_builder"
     const val CALL_QUEUE = "call_queue/{sessionId}"
     const val SYNC_SETTINGS = "sync_settings"
+    const val MERGE_DUPLICATES = "merge_duplicates"
 
     fun events(contactId: Long, contactName: String) = "events/$contactId/$contactName"
     fun callQueue(sessionId: Long) = "call_queue/$sessionId"
@@ -40,8 +42,15 @@ fun TouchBaseNavHost(navController: NavHostController = rememberNavController())
                         navController.navigate(Routes.events(contactId, contactName))
                     },
                     onOpenQueueBuilder = { navController.navigate(Routes.QUEUE_BUILDER) },
-                    onOpenSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) }
+                    onOpenSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
+                    onOpenMergeDuplicates = { navController.navigate(Routes.MERGE_DUPLICATES) }
                 )
+            }
+        }
+
+        composable(Routes.MERGE_DUPLICATES) {
+            ContactsPermissionGate {
+                MergeDuplicatesScreen(onBack = { navController.popBackStack() })
             }
         }
 

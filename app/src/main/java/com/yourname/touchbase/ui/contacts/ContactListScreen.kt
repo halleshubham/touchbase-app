@@ -41,6 +41,7 @@ fun ContactListScreen(
     onOpenEvents: (Long, String) -> Unit,
     onOpenQueueBuilder: () -> Unit,
     onOpenSyncSettings: () -> Unit,
+    onOpenMergeDuplicates: () -> Unit,
     viewModel: ContactListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -75,6 +76,9 @@ fun ContactListScreen(
                             })
                             DropdownMenuItem(text = { Text("Google sync") }, onClick = {
                                 showMenu = false; onOpenSyncSettings()
+                            })
+                            DropdownMenuItem(text = { Text("Merge duplicate contacts") }, onClick = {
+                                showMenu = false; onOpenMergeDuplicates()
                             })
                         }
                     }
@@ -136,6 +140,7 @@ fun ContactListScreen(
                             onToggleTag = { tag, assigned ->
                                 viewModel.toggleTag(cwt.contact.id, tag, assigned)
                             },
+                            onCreateTag = { label -> viewModel.createTagAndAssign(cwt.contact.id, label) },
                             onOpenEvents = { onOpenEvents(cwt.contact.id, cwt.contact.displayName) }
                         )
                         HorizontalDivider()
@@ -301,10 +306,12 @@ private fun ContactRow(
     allTags: List<Tag>,
     templates: List<MessageTemplate>,
     onToggleTag: (Tag, Boolean) -> Unit,
+    onCreateTag: (String) -> Unit,
     onOpenEvents: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showTemplatePicker by remember { mutableStateOf(false) }
+    var showCreateTagDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Column(
@@ -381,9 +388,43 @@ private fun ContactRow(
                         label = { Text(tag.label) }
                     )
                 }
+                item {
+                    AssistChip(onClick = { showCreateTagDialog = true }, label = { Text("+ New tag") })
+                }
             }
         }
     }
+
+    if (showCreateTagDialog) {
+        CreateTagDialog(
+            onDismiss = { showCreateTagDialog = false },
+            onConfirm = { label ->
+                onCreateTag(label)
+                showCreateTagDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun CreateTagDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var label by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New tag") },
+        text = {
+            OutlinedTextField(
+                value = label,
+                onValueChange = { label = it },
+                label = { Text("Tag name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { if (label.isNotBlank()) onConfirm(label) }) { Text("Create & apply") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
