@@ -1,5 +1,6 @@
 package com.yourname.touchbase.ui.templates
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -133,4 +134,4 @@ private fun TemplateEditorDialog(
 private val Alignment_CenterVertically = androidx.compose.ui.Alignment.CenterVertically
 
 private fun Modifier.clickableRow(onClick: () -> Unit): Modifier =
-    this.then(androidx.compose.foundation.clickable(onClick = onClick))
+    this.clickable(onClick = onClick)
