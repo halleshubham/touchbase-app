@@ -14,8 +14,8 @@ import androidx.room.RoomDatabase
         CallSessionItem::class,
         SavedFilter::class
     ],
-    // Bumped without a schema change - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
-    version = 4,
+    // Contact.lastSyncedTimestamp + SavedFilter date-basis/custom-range columns - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+    version = 5,
     exportSchema = true
 )
 abstract class TouchBaseDatabase : RoomDatabase() {

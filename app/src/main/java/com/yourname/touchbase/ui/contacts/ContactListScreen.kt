@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,14 +26,26 @@ import com.yourname.touchbase.data.local.MessageTemplate
 import com.yourname.touchbase.data.local.SavedFilter
 import com.yourname.touchbase.data.local.Tag
 import com.yourname.touchbase.util.WhatsAppLauncher
+import androidx.compose.ui.window.Dialog
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 private val addedDateFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
 private fun formatAddedDate(epochMillis: Long): String =
     Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(addedDateFormatter)
+
+// DateRangePicker returns UTC midnight - reinterpret as local day boundaries so
+// the picked end date is fully included - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+private fun utcMidnightToLocalStartOfDay(utcMidnightMillis: Long): Long =
+    Instant.ofEpochMilli(utcMidnightMillis).atZone(ZoneOffset.UTC).toLocalDate()
+        .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+private fun utcMidnightToLocalEndOfDay(utcMidnightMillis: Long): Long =
+    Instant.ofEpochMilli(utcMidnightMillis).atZone(ZoneOffset.UTC).toLocalDate()
+        .atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +66,7 @@ fun ContactListScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
-    val hasNonDefaultFilters = uiState.sortOrder != SortOrder.NEWEST_ADDED_FIRST ||
+    val hasNonDefaultFilters = uiState.sortOrder != SortOrder.NEWEST_FIRST ||
         uiState.dateFilter != DateFilter.ALL_TIME
 
     LaunchedEffect(Unit) { viewModel.refreshFromSystemContacts() }
@@ -64,6 +77,12 @@ fun ContactListScreen(
                 title = { Text("Contacts") },
                 actions = {
                     TextButton(onClick = onOpenQueueBuilder) { Text("Call queue") }
+                    IconButton(
+                        onClick = { viewModel.refreshFromSystemContacts() },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh from phone contacts")
+                    }
                     IconButton(onClick = { showFilterSheet = true }) {
                         BadgedBox(badge = { if (hasNonDefaultFilters) Badge() }) {
                             Icon(Icons.Filled.FilterList, contentDescription = "Sort, filter and lists")
@@ -171,7 +190,9 @@ fun ContactListScreen(
         FilterSortSheet(
             uiState = uiState,
             onSetSortOrder = viewModel::setSortOrder,
+            onSetDateBasis = viewModel::setDateBasis,
             onSetDateFilter = viewModel::setDateFilter,
+            onSetCustomDateRange = viewModel::setCustomDateRange,
             onApplySavedFilter = viewModel::applySavedFilter,
             onDeleteSavedFilter = viewModel::deleteSavedFilter,
             onSaveCurrentAsList = viewModel::saveCurrentFilterAsList,
@@ -197,13 +218,16 @@ fun ContactListScreen(
 private fun FilterSortSheet(
     uiState: ContactListUiState,
     onSetSortOrder: (SortOrder) -> Unit,
+    onSetDateBasis: (DateBasis) -> Unit,
     onSetDateFilter: (DateFilter) -> Unit,
+    onSetCustomDateRange: (Long, Long) -> Unit,
     onApplySavedFilter: (SavedFilter) -> Unit,
     onDeleteSavedFilter: (SavedFilter) -> Unit,
     onSaveCurrentAsList: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var showSaveDialog by remember { mutableStateOf(false) }
+    var showRangePicker by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -213,29 +237,47 @@ private fun FilterSortSheet(
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Text("Date basis", style = MaterialTheme.typography.titleMedium)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                DateBasis.entries.forEachIndexed { index, basis ->
+                    SegmentedButton(
+                        selected = uiState.dateBasis == basis,
+                        onClick = { onSetDateBasis(basis) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = DateBasis.entries.size)
+                    ) { Text(basis.label) }
+                }
+            }
+
             Text("Sort", style = MaterialTheme.typography.titleMedium)
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 SegmentedButton(
-                    selected = uiState.sortOrder == SortOrder.NEWEST_ADDED_FIRST,
-                    onClick = { onSetSortOrder(SortOrder.NEWEST_ADDED_FIRST) },
+                    selected = uiState.sortOrder == SortOrder.NEWEST_FIRST,
+                    onClick = { onSetSortOrder(SortOrder.NEWEST_FIRST) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                ) { Text("Newest added") }
+                ) { Text("Newest first") }
                 SegmentedButton(
-                    selected = uiState.sortOrder == SortOrder.OLDEST_ADDED_FIRST,
-                    onClick = { onSetSortOrder(SortOrder.OLDEST_ADDED_FIRST) },
+                    selected = uiState.sortOrder == SortOrder.OLDEST_FIRST,
+                    onClick = { onSetSortOrder(SortOrder.OLDEST_FIRST) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                ) { Text("Oldest added") }
+                ) { Text("Oldest first") }
             }
 
-            Text("Added date", style = MaterialTheme.typography.titleMedium)
+            Text("${uiState.dateBasis.label} date", style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DateFilter.entries.forEach { filter ->
                     FilterChip(
                         selected = uiState.dateFilter == filter,
-                        onClick = { onSetDateFilter(filter) },
+                        onClick = { if (filter == DateFilter.CUSTOM) showRangePicker = true else onSetDateFilter(filter) },
                         label = { Text(filter.label) }
                     )
                 }
+            }
+            if (uiState.dateFilter == DateFilter.CUSTOM && uiState.customRange != null) {
+                Text(
+                    "${formatAddedDate(uiState.customRange.first)} - ${formatAddedDate(uiState.customRange.second)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -286,6 +328,40 @@ private fun FilterSortSheet(
                 showSaveDialog = false
             }
         )
+    }
+
+    if (showRangePicker) {
+        CustomDateRangeDialog(
+            onDismiss = { showRangePicker = false },
+            onConfirm = { start, end ->
+                onSetCustomDateRange(start, end)
+                showRangePicker = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomDateRangeDialog(onDismiss: () -> Unit, onConfirm: (Long, Long) -> Unit) {
+    val rangeState = rememberDateRangePickerState()
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
+            Column {
+                DateRangePicker(state = rangeState, modifier = Modifier.weight(1f, fill = false))
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = {
+                        val start = rangeState.selectedStartDateMillis?.let(::utcMidnightToLocalStartOfDay)
+                        val end = rangeState.selectedEndDateMillis?.let(::utcMidnightToLocalEndOfDay)
+                        if (start != null && end != null) onConfirm(start, end)
+                    }) { Text("Apply") }
+                }
+            }
+        }
     }
 }
 

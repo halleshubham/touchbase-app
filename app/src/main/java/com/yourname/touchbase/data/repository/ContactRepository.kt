@@ -23,9 +23,12 @@ class ContactRepository @Inject constructor(
 
     fun pagedContacts(
         tagId: Long?,
-        minTimestampAdded: Long?,
-        sortAscending: Boolean
-    ): PagingSource<Int, ContactWithTags> = dao.pagedContacts(tagId, minTimestampAdded, sortAscending)
+        minTimestamp: Long?,
+        maxTimestamp: Long?,
+        sortAscending: Boolean,
+        useSyncedBasis: Boolean
+    ): PagingSource<Int, ContactWithTags> =
+        dao.pagedContacts(tagId, minTimestamp, maxTimestamp, sortAscending, useSyncedBasis)
 
     fun observeTags(): Flow<List<Tag>> = dao.observeAllTags()
 
@@ -45,7 +48,11 @@ class ContactRepository @Inject constructor(
         // Only rows that are new or actually changed - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
         val changedRows = systemContacts.mapNotNull { sys ->
             val existing = existingBySystemId[sys.systemContactId]
-            if (existing != null && existing.displayName == sys.displayName && existing.phoneNumber == sys.phoneNumber) {
+            val unchanged = existing != null &&
+                existing.displayName == sys.displayName &&
+                existing.phoneNumber == sys.phoneNumber &&
+                existing.lastSyncedTimestamp == sys.lastUpdatedTimestamp
+            if (unchanged) {
                 null
             } else {
                 Contact(
@@ -54,6 +61,7 @@ class ContactRepository @Inject constructor(
                     displayName = sys.displayName,
                     phoneNumber = sys.phoneNumber,
                     rawTimestampAdded = existing?.rawTimestampAdded ?: sys.lastUpdatedTimestamp,
+                    lastSyncedTimestamp = sys.lastUpdatedTimestamp,
                     syncStatus = existing?.syncStatus ?: SyncStatus.SYNCED
                 )
             }
@@ -68,12 +76,14 @@ class ContactRepository @Inject constructor(
      */
     suspend fun quickAdd(displayName: String, phoneNumber: String, account: Account? = null) {
         val systemId = systemSource.quickAddContact(displayName, phoneNumber, account)
+        val now = System.currentTimeMillis()
         dao.upsert(
             Contact(
                 systemContactId = if (systemId > 0) systemId else null,
                 displayName = displayName,
                 phoneNumber = phoneNumber,
-                rawTimestampAdded = System.currentTimeMillis(),
+                rawTimestampAdded = now,
+                lastSyncedTimestamp = now,
                 syncStatus = if (systemId > 0) SyncStatus.SYNCED else SyncStatus.PENDING
             )
         )
@@ -116,10 +126,25 @@ class ContactRepository @Inject constructor(
 
     fun observeSavedFilters(): Flow<List<SavedFilter>> = savedFilterDao.observeAll()
 
-    suspend fun saveFilter(name: String, tagId: Long?, dateFilterName: String, sortOrderName: String): Long =
-        savedFilterDao.insert(
-            SavedFilter(name = name, tagId = tagId, dateFilter = dateFilterName, sortOrder = sortOrderName)
+    suspend fun saveFilter(
+        name: String,
+        tagId: Long?,
+        dateFilterName: String,
+        sortOrderName: String,
+        dateBasisName: String,
+        customRangeStart: Long?,
+        customRangeEnd: Long?
+    ): Long = savedFilterDao.insert(
+        SavedFilter(
+            name = name,
+            tagId = tagId,
+            dateFilter = dateFilterName,
+            sortOrder = sortOrderName,
+            dateBasis = dateBasisName,
+            customRangeStart = customRangeStart,
+            customRangeEnd = customRangeEnd
         )
+    )
 
     suspend fun renameSavedFilter(filter: SavedFilter, newName: String) =
         savedFilterDao.update(filter.copy(name = newName))

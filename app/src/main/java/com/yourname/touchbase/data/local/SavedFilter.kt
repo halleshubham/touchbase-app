@@ -21,7 +21,10 @@ data class SavedFilter(
     val name: String,
     val tagId: Long? = null,
     val dateFilter: String,
-    val sortOrder: String
+    val sortOrder: String,
+    val dateBasis: String = "ADDED",
+    val customRangeStart: Long? = null,
+    val customRangeEnd: Long? = null
 )
 
 @Dao

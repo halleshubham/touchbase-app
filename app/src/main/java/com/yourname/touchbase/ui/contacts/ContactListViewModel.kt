@@ -27,19 +27,24 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class SortOrder { NEWEST_ADDED_FIRST, OLDEST_ADDED_FIRST }
+enum class SortOrder { NEWEST_FIRST, OLDEST_FIRST }
+
+enum class DateBasis(val label: String) { ADDED("Added"), SYNCED("Last synced") }
 
 enum class DateFilter(val label: String, val maxAgeDays: Int?) {
     ALL_TIME("All", null),
     LAST_WEEK("Last week", 7),
     LAST_MONTH("Last month", 30),
-    LAST_3_MONTHS("Last 3 months", 90)
+    LAST_3_MONTHS("Last 3 months", 90),
+    CUSTOM("Custom range", null)
 }
 
 private data class ListControls(
     val tagFilter: Long?,
     val sortOrder: SortOrder,
-    val dateFilter: DateFilter
+    val dateFilter: DateFilter,
+    val dateBasis: DateBasis,
+    val customRange: Pair<Long, Long>?
 )
 
 data class ContactListUiState(
@@ -47,8 +52,10 @@ data class ContactListUiState(
     val templates: List<MessageTemplate> = emptyList(),
     val isLoading: Boolean = true,
     val selectedTagFilter: Long? = null,
-    val sortOrder: SortOrder = SortOrder.NEWEST_ADDED_FIRST,
+    val sortOrder: SortOrder = SortOrder.NEWEST_FIRST,
     val dateFilter: DateFilter = DateFilter.ALL_TIME,
+    val dateBasis: DateBasis = DateBasis.ADDED,
+    val customRange: Pair<Long, Long>? = null,
     val savedFilters: List<SavedFilter> = emptyList(),
     val quickAddAccountLabel: String = "Phone only (no sync)"
 )
@@ -69,26 +76,35 @@ class ContactListViewModel @Inject constructor(
 
     private val _isLoading = MutableStateFlow(true)
     private val _tagFilter = MutableStateFlow<Long?>(null)
-    private val _sortOrder = MutableStateFlow(SortOrder.NEWEST_ADDED_FIRST)
+    private val _sortOrder = MutableStateFlow(SortOrder.NEWEST_FIRST)
     private val _dateFilter = MutableStateFlow(DateFilter.ALL_TIME)
+    private val _dateBasis = MutableStateFlow(DateBasis.ADDED)
+    private val _customRange = MutableStateFlow<Pair<Long, Long>?>(null)
 
-    private val controls = combine(_tagFilter, _sortOrder, _dateFilter) { tagFilter, sortOrder, dateFilter ->
-        ListControls(tagFilter, sortOrder, dateFilter)
+    private val controls = combine(
+        _tagFilter, _sortOrder, _dateFilter, _dateBasis, _customRange
+    ) { tagFilter, sortOrder, dateFilter, dateBasis, customRange ->
+        ListControls(tagFilter, sortOrder, dateFilter, dateBasis, customRange)
     }
 
     // Rebuilds the Pager per filter/sort change - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     val pagedContacts: Flow<PagingData<ContactWithTags>> = controls
         .flatMapLatest { c ->
-            val minTimestampAdded = c.dateFilter.maxAgeDays?.let { days ->
-                System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days.toLong())
+            val (minTimestamp, maxTimestamp) = when {
+                c.dateFilter == DateFilter.CUSTOM -> c.customRange?.first to c.customRange?.second
+                c.dateFilter.maxAgeDays != null ->
+                    (System.currentTimeMillis() - TimeUnit.DAYS.toMillis(c.dateFilter.maxAgeDays.toLong())) to null
+                else -> null to null
             }
             Pager(
                 config = PagingConfig(pageSize = 30, enablePlaceholders = false)
             ) {
                 repository.pagedContacts(
                     tagId = c.tagFilter,
-                    minTimestampAdded = minTimestampAdded,
-                    sortAscending = c.sortOrder == SortOrder.OLDEST_ADDED_FIRST
+                    minTimestamp = minTimestamp,
+                    maxTimestamp = maxTimestamp,
+                    sortAscending = c.sortOrder == SortOrder.OLDEST_FIRST,
+                    useSyncedBasis = c.dateBasis == DateBasis.SYNCED
                 )
             }.flow
         }
@@ -108,6 +124,8 @@ class ContactListViewModel @Inject constructor(
             selectedTagFilter = controls.tagFilter,
             sortOrder = controls.sortOrder,
             dateFilter = controls.dateFilter,
+            dateBasis = controls.dateBasis,
+            customRange = controls.customRange,
             savedFilters = savedFilters,
             quickAddAccountLabel = accountsHelper.getPreferredAccount().displayLabel
         )
@@ -129,8 +147,18 @@ class ContactListViewModel @Inject constructor(
         _sortOrder.value = order
     }
 
+    fun setDateBasis(basis: DateBasis) {
+        _dateBasis.value = basis
+    }
+
     fun setDateFilter(filter: DateFilter) {
         _dateFilter.value = filter
+        if (filter != DateFilter.CUSTOM) _customRange.value = null
+    }
+
+    fun setCustomDateRange(startMillis: Long, endMillis: Long) {
+        _customRange.value = startMillis to endMillis
+        _dateFilter.value = DateFilter.CUSTOM
     }
 
     /** Saves the current tag/date/sort combination as a named, reusable list. */
@@ -140,7 +168,10 @@ class ContactListViewModel @Inject constructor(
                 name = name,
                 tagId = _tagFilter.value,
                 dateFilterName = _dateFilter.value.name,
-                sortOrderName = _sortOrder.value.name
+                sortOrderName = _sortOrder.value.name,
+                dateBasisName = _dateBasis.value.name,
+                customRangeStart = _customRange.value?.first,
+                customRangeEnd = _customRange.value?.second
             )
         }
     }
@@ -149,6 +180,12 @@ class ContactListViewModel @Inject constructor(
         _tagFilter.value = filter.tagId
         _dateFilter.value = DateFilter.valueOf(filter.dateFilter)
         _sortOrder.value = SortOrder.valueOf(filter.sortOrder)
+        _dateBasis.value = DateBasis.valueOf(filter.dateBasis)
+        _customRange.value = if (filter.customRangeStart != null && filter.customRangeEnd != null) {
+            filter.customRangeStart to filter.customRangeEnd
+        } else {
+            null
+        }
     }
 
     fun deleteSavedFilter(filter: SavedFilter) {

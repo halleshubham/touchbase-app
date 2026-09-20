@@ -18,7 +18,8 @@ enum class SyncStatus { PENDING, SYNCED, CONFLICT }
     tableName = "contacts",
     indices = [
         Index(value = ["systemContactId"]),
-        Index(value = ["rawTimestampAdded"])
+        Index(value = ["rawTimestampAdded"]),
+        Index(value = ["lastSyncedTimestamp"])
     ]
 )
 data class Contact(
@@ -26,6 +27,9 @@ data class Contact(
     val systemContactId: Long? = null,
     val displayName: String,
     val phoneNumber: String,
+    // Stamped once on first sight, frozen after - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     val rawTimestampAdded: Long,
+    // Updated every time the OS reports this contact actually changed - unlike rawTimestampAdded, this is live.
+    val lastSyncedTimestamp: Long = 0,
     val syncStatus: SyncStatus = SyncStatus.PENDING
 )

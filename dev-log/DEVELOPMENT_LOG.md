@@ -190,6 +190,26 @@ explaining it in place.
   date; reinterpreted as local 9am so the reminder fires the day the user
   actually picked rather than shifting by timezone offset.
 
+- **Refresh button + Added-vs-Synced distinction + custom date range.**
+  Added a manual refresh icon in the top bar (calls the same
+  `refreshFromSystemContacts()` as the auto-refresh on screen open).
+  Added `Contact.lastSyncedTimestamp`, a NEW column separate from
+  `rawTimestampAdded` - it updates every time the OS reports a genuine
+  change to that contact (name/phone/its own last-updated signal),
+  whereas `rawTimestampAdded` is deliberately frozen after first sight
+  (see the "old contacts showing as recently added" fix above). Sort/date
+  filter now has a "Date basis" toggle (Added / Last synced) plus a
+  "Custom range" option using a `DateRangePicker` alongside the existing
+  presets. `ContactDao.pagedContacts()` picks the column to filter/sort on
+  via a `CASE WHEN :useSyncedBasis` expression rather than two separate
+  queries. `SortOrder.NEWEST_ADDED_FIRST`/`OLDEST_ADDED_FIRST` renamed to
+  `NEWEST_FIRST`/`OLDEST_FIRST` since they're basis-neutral now.
+  `SavedFilter` gained `dateBasis`/`customRangeStart`/`customRangeEnd` so
+  saved lists round-trip a custom range too. `DateRangePicker` (like the
+  single `DatePicker` used for the callback reminder) returns UTC
+  midnight for the picked dates - reinterpreted as local start/end-of-day
+  so the end date is fully inclusive.
+
 - **"Create list from contacts."** Search + multi-select + name a list.
   This reuses Tags (bulk-create a tag, bulk-assign it to the selected
   contact ids) rather than a second per-contact membership system, since

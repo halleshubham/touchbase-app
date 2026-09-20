@@ -13,23 +13,29 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ContactDao {
 
-    // Single flexible query for the paged list - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
+    // Single flexible query for the paged list; basisColumn picks rawTimestampAdded vs
+    // lastSyncedTimestamp via a CASE expression - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
     @Transaction
     @Query(
         """
         SELECT DISTINCT contacts.* FROM contacts
         LEFT JOIN contact_tag_cross_ref ON contacts.id = contact_tag_cross_ref.contactId
         WHERE (:tagId IS NULL OR contact_tag_cross_ref.tagId = :tagId)
-          AND (:minTimestampAdded IS NULL OR contacts.rawTimestampAdded >= :minTimestampAdded)
+          AND (:minTimestamp IS NULL OR
+               (CASE WHEN :useSyncedBasis = 1 THEN contacts.lastSyncedTimestamp ELSE contacts.rawTimestampAdded END) >= :minTimestamp)
+          AND (:maxTimestamp IS NULL OR
+               (CASE WHEN :useSyncedBasis = 1 THEN contacts.lastSyncedTimestamp ELSE contacts.rawTimestampAdded END) <= :maxTimestamp)
         ORDER BY
-            CASE WHEN :sortAscending = 0 THEN contacts.rawTimestampAdded END DESC,
-            CASE WHEN :sortAscending = 1 THEN contacts.rawTimestampAdded END ASC
+            CASE WHEN :sortAscending = 0 THEN (CASE WHEN :useSyncedBasis = 1 THEN contacts.lastSyncedTimestamp ELSE contacts.rawTimestampAdded END) END DESC,
+            CASE WHEN :sortAscending = 1 THEN (CASE WHEN :useSyncedBasis = 1 THEN contacts.lastSyncedTimestamp ELSE contacts.rawTimestampAdded END) END ASC
         """
     )
     fun pagedContacts(
         tagId: Long?,
-        minTimestampAdded: Long?,
-        sortAscending: Boolean
+        minTimestamp: Long?,
+        maxTimestamp: Long?,
+        sortAscending: Boolean,
+        useSyncedBasis: Boolean
     ): PagingSource<Int, ContactWithTags>
 
     // Full (non-paged) list, for callers that need everything at once - see dev-log/DEVELOPMENT_LOG.md (2026-09-20).
