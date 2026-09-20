@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Phase 1: read/organize contacts -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
+    <!-- Phase 2: WhatsApp prefill uses ACTION_SEND / ACTION_VIEW, no special permission needed -->
+
+    <!-- Phase 3: reminders -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Phase 4: guided call queue -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    // Phase 5: Google sync
+    // No OAuth / People API needed. Contacts written to the device's existing
+    // Google account (already signed in under Settings > Accounts) are synced
+    // to Google by Android's own built-in sync adapter — the same mechanism
+    // the stock Contacts app relies on. We just target that account and ask
+    // for an immediate sync via ContentResolver.requestSync().
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.READ_SYNC_STATS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+
+    <application
+        android:name=".TouchBaseApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TouchBase">
+
+        <!-- Disable WorkManager's default initializer so Hilt's WorkerFactory
+             (wired in TouchBaseApp.workManagerConfiguration) is used instead,
+             which is required for @HiltWorker (SyncWorker) to get its dependencies. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TouchBase">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".reminders.ReminderBroadcastReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".reminders.BootReminderRescheduler"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+          Call-end detection for the guided call queue (Phase 4) is done with a
+          dynamically (context-)registered receiver in CallQueueScreen instead
+          of a manifest entry here — implicit PHONE_STATE broadcasts are
+          restricted for manifest-declared receivers on Android 8+, but work
+          fine for receivers registered at runtime while the queue screen is
+          visible, which is exactly when we need them.
+        -->
+
+    </application>
+
+</manifest>
